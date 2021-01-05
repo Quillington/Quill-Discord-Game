@@ -7,7 +7,13 @@ config.read('config.ini')
 
 client = discord.Client()
 
-fruits = ['orange', 'apple', 'pear', 'banana', 'kiwi',]
+fruits = {
+    "apple" : "🍎", 
+    "pear" : "🍐", 
+    "banana" : "🍌", 
+    "kiwi" : "🥝"
+}
+
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
@@ -19,6 +25,9 @@ async def on_message(message):
         return
 
     if message.content.startswith('$fruit'): 
-        await message.channel.send(random.choice(fruits))
+        fruitChoice = random.choice(list(fruits.keys()))
+        
+        reply = await message.channel.send(fruitChoice)
+        await reply.add_reaction(fruits[fruitChoice])
 
 client.run(config['DEFAULT']['token'])
