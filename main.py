@@ -1,6 +1,7 @@
 import discord
 import configparser
 import random
+import json
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -22,6 +23,17 @@ fruitCounters = {
     
 }
 
+class userInfo:
+
+    def __init__ (self, user):
+        self.user = user
+    
+    def get_user (self, user):
+        if not (user in userFruitDictionary):
+            userFruitDictionary.update(
+                {user : [] }
+                )
+                
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
@@ -34,8 +46,8 @@ async def on_message(message):
 
     if message.content.startswith('$fruit'): 
         fruitChoice = random.choice(list(fruits.keys()))
-        if not (message.author.id in userFruitDictionary):
-            userFruitDictionary.update({message.author.id : []})
+        u = userInfo(message.author.id)
+        u.get_user(message.author.id)
         userFruitDictionary[message.author.id].append(fruitChoice)
         reply = await message.channel.send(fruitChoice)
         await reply.add_reaction(fruits[fruitChoice])
