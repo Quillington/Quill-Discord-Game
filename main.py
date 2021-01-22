@@ -26,6 +26,7 @@ class UserInfo:
         self.fruits = []
         self.currency = 50
         self.lastMessage = 0
+        self.firstMessage = True
 
     def check_currency(self, num):
         #pass to rolling functions before rolls
@@ -48,14 +49,16 @@ class UserInfo:
 
 #fruitCommands:
 
-def roll_fruits(user, firstRoll):
+def roll_fruits(user, noRoll):
     #add random fruits to a list and returns
-    if (not user.fruits == []) and (firstRoll):
-        return True
-
+    if (not user.fruits == []) and (noRoll):
+        return  True
+    
     else:    
-        if user.check_currency(10):
+        if not user.firstMessage:
+            pass
             #user.remove_currency(10)
+        if user.check_currency(10):
             fruitRolls = ""
             user.fruits = []
             i = 4
