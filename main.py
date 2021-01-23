@@ -3,6 +3,8 @@ import configparser
 import random
 import json
 
+from fruit import*
+
 config = configparser.ConfigParser()
 config.read('config.ini')
 
@@ -18,7 +20,16 @@ fruits = {
     "tangerine" : "🍊"
 }
 
+lootTableEntries = [
+    LootTable(1, 35, [Fruit("🍎", "apple"), Fruit("🍐", "pear")]),
+    LootTable(2, 25, [Fruit("🍌", "banana"), Fruit("🍓", "strawberry")]),
+    LootTable(3, 10, [Fruit("🍇", "grapes"), Fruit("🍊", "tangerine")]),
+    LootTable(4, 1, [Fruit("🍏", "green apple")])
+]
+
 users = {}
+
+tiers = {}
 
 class UserInfo:
 
@@ -52,21 +63,26 @@ class UserInfo:
 #fruitCommands:
 def roll_fruits(user, noRoll):
     #add random fruits to a list and returns
+    #noRoll indicates if the shop is merely opened
     if (not user.fruits == []) and (noRoll):
         return  True
     
+    #Rolling code
     else:    
         if not user.firstMessage:
             pass
             #user.remove_currency(10)
         if user.check_currency(10):
-            fruitRolls = ""
             user.fruits = []
-            i = 4
-            while i > 0:
-                fruitRolls = random.choice(list(fruits.values()))
-                user.fruits.append(fruitRolls)
-                i -= 1
+            weightList = []
+            for i in lootTableEntries:
+                weightList.append(i.weight)
+            j = 0
+            while j < 4:
+                lootChoice = random.choices(lootTableEntries, weights = weightList)
+                fruitChoice = random.choice(lootChoice[0].fruit)
+                user.fruits += fruitChoice.emoji
+                j += 1
             return True
         else:
             return False
@@ -83,13 +99,17 @@ def pick_fruits(user, reaction):
 
 #Message Commands:
 async def send_roll(user, message, checkMessage):
+    #Sends info from roll_fruits to ...
     fruitList = "".join(user.fruits)
+    #.. on_message
     if checkMessage:
         message = await message.channel.send(fruitList)
         user.lastMessage = message.id
+    #.. on_reaction_add
     else:
         await message.edit(content = fruitList)
 
+    #then clears and readds appropriate reactions
     await message.clear_reactions()
         
     for f in user.fruits:
