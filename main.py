@@ -10,19 +10,10 @@ config.read('config.ini')
 
 client = discord.Client()
 
-fruits = {
-    "apple" : "🍎", 
-    "pear" : "🍐", 
-    "banana" : "🍌", 
-    "kiwi" : "🥝",
-    "strawberry" : "🍓",
-    "grapes" : "🍇",
-    "tangerine" : "🍊"
-}
 
 lootTableEntries = [
-    LootTable(1, 35, [Fruit("🍎", "apple"), Fruit("🍐", "pear")]),
-    LootTable(2, 25, [Fruit("🍌", "banana"), Fruit("🍓", "strawberry")]),
+    LootTable(1, 50, [Fruit("🍎", "apple"), Fruit("🍐", "pear")]),
+    LootTable(2, 35, [Fruit("🍌", "banana"), Fruit("🍓", "strawberry")]),
     LootTable(3, 10, [Fruit("🍇", "grapes"), Fruit("🍊", "tangerine")]),
     LootTable(4, 1, [Fruit("🍏", "green apple")])
 ]
@@ -77,12 +68,10 @@ def roll_fruits(user, noRoll):
             weightList = []
             for i in lootTableEntries:
                 weightList.append(i.weight)
-            j = 0
-            while j < 4:
+            for _ in range(4):
                 lootChoice = random.choices(lootTableEntries, weights = weightList)
                 fruitChoice = random.choice(lootChoice[0].fruit)
                 user.fruits += fruitChoice.emoji
-                j += 1
             return True
         else:
             return False
@@ -116,6 +105,16 @@ async def send_roll(user, message, checkMessage):
         await message.add_reaction(f)
     await message.add_reaction("🔁")
 
+
+
+def profile_embed(user, message):
+    profile = discord.Embed(title = f"{user.currency}🪙", description= "-----------------", color = 0xED9B85)    
+    if user.pickedFruits == []:
+        fValue = "none"
+    else:
+        fValue = "\n".join(user.pickedFruits)
+    profile.add_field(name = "Fruit", value= fValue)
+    return profile
     
                 
 #Events:
@@ -124,16 +123,22 @@ async def on_ready():
     print('We have logged in as {0.user}'.format(client))
 
 
-
 @client.event
 async def on_message(message):
     user = UserInfo.get_user(message.author.id)
     #Pulls up shop
-    if message.content.startswith('$fruit'):
+    if message.content.startswith("$fruit"):
         if roll_fruits(user, True):
             await send_roll(user, message, True)
         else:
             await message.reply("You can't afford to roll fruit.")
+
+
+    if message.content.startswith("$p"):
+        
+    
+        await message.channel.send(embed = profile_embed(user, message))
+
 
 @client.event
 async def on_reaction_add(reaction, author):
@@ -161,7 +166,6 @@ async def on_reaction_add(reaction, author):
         else:
             await reaction.message.channel.send(f"You have too many fruits in storage ({user.fruitLimit}).")
 
+
         
-
-
 client.run(config['DEFAULT']['token'])
