@@ -28,7 +28,7 @@ class UserInfo:
     def __init__ (self):
         self.fruits = []
         self.pickedFruits = []
-        self.fruitLimit = 5
+        self.fruitLimit = 7
         self.currency = 50
         self.lastMessage = 0
         self.firstMessage = True
@@ -144,16 +144,18 @@ async def send_roll(user, message, checkMessage):
     await message.add_reaction("🔁")
 
 
+def profile_embed(user, message):
+    profile = discord.Embed(title = f"{user.currency}🪙", description= "-----------------", color = 0xED9B85)    
 
-#def profile_embed(user, message):
-    #profile = discord.Embed(title = f"{user.currency}🪙", description= "-----------------", color = 0xED9B85)    
-    #if user.pickedFruits == []:
-    #    fValue = "none"
-    #else:
-    #    for f, v in user.pickedFruits:
-    #        fValue += f + v
-    #profile.add_field(name = "Fruit", value= fValue)
-    #return profile
+    fValue = ""
+    for f in range(user.fruitLimit):
+        if f < len(user.pickedFruits):
+            fValue += f" {f + 1}. {user.pickedFruits[f].fruit} {user.pickedFruits[f].star} \n"
+        else:
+            fValue += f" {f + 1}. \n"
+        
+    profile.add_field(name = "Fruit", value= fValue)
+    return profile
     
                 
 #Events:
@@ -176,7 +178,7 @@ async def on_message(message):
     if message.content.startswith("$p"):
         
         print (user.pickedFruits)
-        #await message.channel.send(embed = profile_embed(user, message))
+        await message.channel.send(embed = profile_embed(user, message))
 
 
 @client.event
