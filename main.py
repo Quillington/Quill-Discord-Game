@@ -4,6 +4,7 @@ import random
 import json
 
 from fruit import*
+from userFruit import UserFruit
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -78,13 +79,54 @@ def roll_fruits(user, noRoll):
 
 def pick_fruits(user, reaction):
     #Picks fruit if there is room in storage
-    if len(user.pickedFruits) >= user.fruitLimit:
-        return False
+
+    #run check if emoji is valid
+    #run combine check 
+    #run limit check
+    #appends fruit using class
+    #returns true or false
+
     for f in user.fruits:
-            if reaction.emoji == f:
-                user.pickedFruits.append(f)
-                user.fruits.remove(f)
-                return True
+        if reaction.emoji == f:
+            
+            if not combine_check(user, reaction.emoji):
+                if len(user.pickedFruits) >= user.fruitLimit:
+                    return False
+                user.pickedFruits.append(UserFruit(reaction.emoji, "⭐"))
+            user.fruits.remove(reaction.emoji)
+            return True
+
+def combine_check (user, newFruit):
+    if not len(user.pickedFruits) == 0:
+        oneCounter = 0
+        twoCounter = 0
+        for n in user.pickedFruits: 
+            if n.star == "⭐" and newFruit == n.fruit:
+                oneCounter += 1
+                print("+1 one star")
+            if n.star == "⭐⭐" and newFruit == n.fruit:
+                twoCounter += 1
+                print("+1 two star")
+        if oneCounter == 2 and twoCounter == 2:
+            user.pickedFruits.remove(UserFruit(newFruit, "⭐"))
+            user.pickedFruits.remove(UserFruit(newFruit, "⭐"))
+            user.pickedFruits.remove(UserFruit(newFruit, "⭐⭐"))
+            user.pickedFruits.remove(UserFruit(newFruit, "⭐⭐"))
+            
+            user.pickedFruits.append(UserFruit(newFruit, "⭐⭐⭐"))
+            print ("A two star has been combined")
+            return True
+        elif oneCounter == 2:
+            user.pickedFruits.remove(UserFruit(newFruit, "⭐"))
+            user.pickedFruits.remove(UserFruit(newFruit, "⭐"))
+            
+            user.pickedFruits.append(UserFruit(newFruit, "⭐⭐"))
+            print ("A two star has been combined")
+            return True
+    return False
+            
+                
+                  
 
 #Message Commands:
 async def send_roll(user, message, checkMessage):
@@ -107,14 +149,15 @@ async def send_roll(user, message, checkMessage):
 
 
 
-def profile_embed(user, message):
-    profile = discord.Embed(title = f"{user.currency}🪙", description= "-----------------", color = 0xED9B85)    
-    if user.pickedFruits == []:
-        fValue = "none"
-    else:
-        fValue = "\n".join(user.pickedFruits)
-    profile.add_field(name = "Fruit", value= fValue)
-    return profile
+#def profile_embed(user, message):
+    #profile = discord.Embed(title = f"{user.currency}🪙", description= "-----------------", color = 0xED9B85)    
+    #if user.pickedFruits == []:
+    #    fValue = "none"
+    #else:
+    #    for f, v in user.pickedFruits:
+    #        fValue += f + v
+    #profile.add_field(name = "Fruit", value= fValue)
+    #return profile
     
                 
 #Events:
@@ -136,8 +179,8 @@ async def on_message(message):
 
     if message.content.startswith("$p"):
         
-    
-        await message.channel.send(embed = profile_embed(user, message))
+        print (user.pickedFruits)
+        #await message.channel.send(embed = profile_embed(user, message))
 
 
 @client.event
