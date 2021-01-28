@@ -103,10 +103,8 @@ def combine_check (user, newFruit):
         for n in user.pickedFruits: 
             if n.star == "⭐" and newFruit == n.fruit:
                 oneCounter += 1
-                print("+1 one star")
             if n.star == "⭐⭐" and newFruit == n.fruit:
                 twoCounter += 1
-                print("+1 two star")
         if oneCounter == 2 and twoCounter == 2:
             user.pickedFruits.remove(UserFruit(newFruit, "⭐"))
             user.pickedFruits.remove(UserFruit(newFruit, "⭐"))
@@ -114,14 +112,12 @@ def combine_check (user, newFruit):
             user.pickedFruits.remove(UserFruit(newFruit, "⭐⭐"))
             
             user.pickedFruits.append(UserFruit(newFruit, "⭐⭐⭐"))
-            print ("A two star has been combined")
             return True
         elif oneCounter == 2:
             user.pickedFruits.remove(UserFruit(newFruit, "⭐"))
             user.pickedFruits.remove(UserFruit(newFruit, "⭐"))
             
             user.pickedFruits.append(UserFruit(newFruit, "⭐⭐"))
-            print ("A two star has been combined")
             return True
     return False
             
