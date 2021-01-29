@@ -120,6 +120,27 @@ def combine_check (user, newFruit):
             user.pickedFruits.append(UserFruit(newFruit, "⭐⭐"))
             return True
     return False
+
+def split_and_sell (user, message):
+    #split
+    message = message.strip("$s")
+    tempList = message.split(",")
+    messageList = []
+    for i in tempList:
+        i.strip()
+        i = int(i)
+        messageList.append(i-1)
+
+    #and sell
+    objectList = []
+    for j in messageList:
+        if j <= user.fruitLimit:
+            objectList.append(user.pickedFruits[j])
+    
+    for x in objectList:
+        user.pickedFruits.remove(x)
+        #user.add_currency(#tier)
+
             
                 
                   
@@ -177,8 +198,11 @@ async def on_message(message):
 
     if message.content.startswith("$p"):
         
-        print (user.pickedFruits)
         await message.channel.send(embed = profile_embed(user, message))
+
+    if message.content.startswith("$s"):
+        split_and_sell(user, message.content)
+        print ("things have been sold")
 
 
 @client.event
