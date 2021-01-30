@@ -13,10 +13,10 @@ client = discord.Client()
 
 
 lootTableEntries = [
-    LootTable(1, 50, [Fruit("🍎", "apple"), Fruit("🍐", "pear")]),
-    LootTable(2, 35, [Fruit("🍌", "banana"), Fruit("🍓", "strawberry")]),
-    LootTable(3, 10, [Fruit("🍇", "grapes"), Fruit("🍊", "tangerine")]),
-    LootTable(4, 1, [Fruit("🍏", "green apple")])
+    LootTable(50, [Fruit("🍎", "apple", [1, 3, 18]), Fruit("🍐", "pear", [1, 3, 18])]),
+    LootTable(35, [Fruit("🍌", "banana", [2, 6, 30]), Fruit("🍓", "strawberry", [2, 6, 30])]),
+    LootTable(10, [Fruit("🍇", "grapes", [3, 9, 45]), Fruit("🍊", "tangerine", [3, 9, 45])]),
+    LootTable(1, [Fruit("🍏", "green apple", [4, 12, 60])])
 ]
 
 users = {}
@@ -63,7 +63,7 @@ def roll_fruits(user, noRoll):
     else:    
         if not user.firstMessage:
             pass
-            #user.remove_currency(10)
+            user.remove_currency(2)
         if user.check_currency(10):
             user.fruits = []
             weightList = []
@@ -77,6 +77,12 @@ def roll_fruits(user, noRoll):
         else:
             return False
 
+def reaction_to_object(user, reaction):
+    for f in lootTableEntries:
+        for e in f.fruit:
+            if e.emoji == reaction:
+                return e
+
 def pick_fruits(user, reaction):
     #Picks fruit if there is room in storage
 
@@ -89,11 +95,13 @@ def pick_fruits(user, reaction):
     for f in user.fruits:
         if reaction.emoji == f:
             
-            if not combine_check(user, reaction.emoji):
+            if not combine_check(user, reaction_to_object(user, reaction.emoji)):
                 if len(user.pickedFruits) >= user.fruitLimit:
                     return False
-                user.pickedFruits.append(UserFruit(reaction.emoji, "⭐"))
+                user.pickedFruits.append(UserFruit(reaction_to_object(user, reaction.emoji), "⭐"))
             user.fruits.remove(reaction.emoji)
+            fruitObject = reaction_to_object(user, reaction.emoji)
+            user.remove_currency(fruitObject.cost[0])
             return True
 
 def combine_check (user, newFruit):
@@ -138,8 +146,9 @@ def split_and_sell (user, message):
             objectList.append(user.pickedFruits[j])
     
     for x in objectList:
+        user.add_currency(x.fruit.cost[len(x.star)-1])
         user.pickedFruits.remove(x)
-        #user.add_currency(#tier)
+        
 
             
                 
@@ -171,7 +180,7 @@ def profile_embed(user, message):
     fValue = ""
     for f in range(user.fruitLimit):
         if f < len(user.pickedFruits):
-            fValue += f" {f + 1}. {user.pickedFruits[f].fruit} {user.pickedFruits[f].star} \n"
+            fValue += f" {f + 1}. {user.pickedFruits[f].fruit.emoji} {user.pickedFruits[f].star} \n"
         else:
             fValue += f" {f + 1}. \n"
         
@@ -202,7 +211,6 @@ async def on_message(message):
 
     if message.content.startswith("$s"):
         split_and_sell(user, message.content)
-        print ("things have been sold")
 
 
 @client.event

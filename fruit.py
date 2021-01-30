@@ -1,16 +1,17 @@
 class Fruit:
 
-    def __init__(self, emoji, name):
+    def __init__(self, emoji, name, cost):
         self.emoji = emoji
         self.name = name
+        self.cost = cost
 
 
 class LootTable:
     
-    def __init__ (self, cost, weight, fruit):
-        self.fruit = fruit
-        self.cost = cost
+    def __init__ (self, weight, fruit):
         self.weight = weight
+        self.fruit = fruit
+        
 
 
 
