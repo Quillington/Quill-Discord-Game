@@ -62,8 +62,8 @@ def roll_fruits(user, noRoll):
     #Rolling code
     else:    
         if not user.firstMessage:
-            pass
             user.remove_currency(2)
+        user.firstMessage = False
         if user.check_currency(10):
             user.fruits = []
             weightList = []
