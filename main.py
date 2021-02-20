@@ -2,6 +2,10 @@ import discord
 import configparser
 import random
 import json
+import sqlite3
+
+
+from operator import itemgetter, attrgetter
 
 from fruit import*
 from userFruit import UserFruit
@@ -23,9 +27,83 @@ users = {}
 
 tiers = {}
 
+activeUsers = []
+
+#storage in SQLite
+conn = sqlite3.connect('sqlTables.db')
+c = conn.cursor()
+#c.execute('''CREATE TABLE userTable
+#    (id TEXT, fruitLimit TINYINT, currency INT, lastMessage TEXT, firstMessage BOOL)''')
+
+#c.execute('''CREATE TABLE fruits
+#    (id TEXT, fruit ntext)''')
+
+#c.execute('''CREATE TABLE pickedFruits
+#    (id TEXT, fruit ntext, star ntext)''')
+
+def sqlRetrieve(user, id):
+    c = conn.cursor()
+    id = str(id)
+    print (id)
+    #user table
+    c.execute('SELECT * FROM userTable WHERE id = ?', (id,))  
+    print (f"rowcount is {c.rowcount}")
+    if c.rowcount == 1:
+        row = c.fetchone()
+        print(f"This is the row {row}")
+        user.fruitLimit = row['fruitLimit']
+        user.currency = row['currency']
+        user.lastMessage = row['lastMessage']
+        user.firstMessage = row['firstMessage']
+        print (f"user fruit limit is {row['fruitLimit']}.")
+        print (f"user currency is {row['currency']}.")
+        
+        
+        #local fruit table
+        c.execute('SELECT * FROM fruits WHERE id = ?', (id,))
+        for row in c:
+            user.fruits.append(row['fruit'])
+        
+        
+        #pickedFruits table
+        c.execute('SELECT * FROM pickedFruits WHERE id = ?', (id,))
+        for row in c:
+            user.pickedFruits.append(UserFruit(row['fruit'], row['star']))
+        
+        
+
+def sqlDump():
+    c = conn.cursor()
+    print(f"The following are the active users {activeUsers}.")
+    for user in activeUsers:
+        id = str(user.id)
+        #user table
+        c.execute('DELETE FROM userTable WHERE id = ?', (id,))
+        c.execute('INSERT INTO userTable (id, fruitLimit, currency, lastMessage, firstMessage) VALUES (?, ?, ?, ?, ?)', (id, user.fruitLimit, user.currency, user.lastMessage, user.firstMessage))
+        print (f"The id {id} and fruit limit {user.fruitLimit} and more are added.")
+
+        #local fruit table
+        c.execute('DELETE FROM fruits WHERE id = ?', (id,))
+        for i in range(len(user.fruits)):
+            c.execute('INSERT INTO fruits (id, fruit) VALUES (?, ?)', (id, user.fruits[i]))
+        
+        #pickedFruits table
+        c.execute('DELETE FROM pickedFruits WHERE id = ?', (id,))
+        for j in range(len(user.pickedFruits)):
+            print (f"j is equal to {j}.")
+            c.execute('INSERT INTO pickedFruits (id, fruit, star) VALUES (?, ?, ?)', (id, user.pickedFruits[j].fruit.emoji, user.pickedFruits[j].star))
+    print ("it committed, hopefully")
+    conn.commit()
+
+def addActiveUser(user):
+    #message and react events call this function so that only people who are rolling are looped through
+    if not (user in activeUsers):
+        activeUsers.append(user)
+
 class UserInfo:
 
-    def __init__ (self):
+    def __init__ (self, id): #todo: adding the id broke everything
+        self.id = id
         self.fruits = []
         self.pickedFruits = []
         self.fruitLimit = 7
@@ -45,12 +123,19 @@ class UserInfo:
 
     def add_currency(self, num):
         self.currency += num
-
+        
     @staticmethod
     def get_user (id):
         if not (id in users):
-            users.update({id : UserInfo()})
+            print(f"reupload code executing")
+            user = UserInfo(id)
+            sqlRetrieve(user, id)
+            users.update({id : user})
+            print(f"user {user} and id {id}")
         return users[id] 
+
+
+
 
 #fruitCommands:
 def roll_fruits(user, noRoll):
@@ -150,8 +235,10 @@ def split_and_sell (user, message):
         user.pickedFruits.remove(x)
         
 
-            
-                
+def sort_profile(user):
+    x = sorted(user.pickedFruits, key = lambda tier : (user.pickedFruits.fruit.cost[0]))
+    y = sorted(x, key = lambda name : user.pickedFruits.fruit.name)        
+    user.pickedFruits = sorted(y, key = lambda star : user.pickedFruits.fruit.star)            
                   
 
 #Message Commands:
@@ -175,7 +262,8 @@ async def send_roll(user, message, checkMessage):
 
 
 def profile_embed(user, message):
-    profile = discord.Embed(title = f"{user.currency}🪙", description= "-----------------", color = 0xED9B85)    
+    profile = discord.Embed(title = f"{user.currency}🪙", description= "-----------------", color = 0xED9B85)  
+    #sort_profile(user)  
 
     fValue = ""
     for f in range(user.fruitLimit):
@@ -199,6 +287,8 @@ async def on_message(message):
     user = UserInfo.get_user(message.author.id)
     #Pulls up shop
     if message.content.startswith("$fruit"):
+        addActiveUser(user)
+        print(f"active users {activeUsers}")
         if roll_fruits(user, True):
             await send_roll(user, message, True)
         else:
@@ -206,12 +296,15 @@ async def on_message(message):
 
 
     if message.content.startswith("$p"):
-        
+        addActiveUser(user)
         await message.channel.send(embed = profile_embed(user, message))
 
     if message.content.startswith("$s"):
+        addActiveUser(user)
         split_and_sell(user, message.content)
 
+    if message.content.startswith("$t"):
+        sqlDump()
 
 @client.event
 async def on_reaction_add(reaction, author):
