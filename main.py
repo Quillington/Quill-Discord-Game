@@ -42,7 +42,7 @@ conn.row_factory = sqlite3.Row
 #c.execute('''CREATE TABLE pickedFruits
 #    (id TEXT, fruit ntext, star ntext)''')
 
-def sqlRetrieve(user, id):
+def sql_retrieve(user, id):
     c = conn.cursor()
     id = str(id)
     #user table
@@ -68,7 +68,7 @@ def sqlRetrieve(user, id):
         
         
 
-def sqlDump():
+def sql_dump():
     c = conn.cursor()
     for user in activeUsers:
         id = str(user.id)
@@ -87,7 +87,7 @@ def sqlDump():
             c.execute('INSERT INTO pickedFruits (id, fruit, star) VALUES (?, ?, ?)', (id, user.pickedFruits[j].fruit.emoji, user.pickedFruits[j].star))
     conn.commit()
 
-def addActiveUser(user):
+def add_active_user(user):
     #message and react events call this function so that only people who are rolling are looped through
     if not (user in activeUsers):
         activeUsers.append(user)
@@ -120,7 +120,7 @@ class UserInfo:
     def get_user (id):
         if not (id in users):
             user = UserInfo(id)
-            sqlRetrieve(user, id)
+            sql_retrieve(user, id)
             users.update({id : user})
         return users[id] 
 
@@ -277,7 +277,7 @@ async def on_message(message):
     user = UserInfo.get_user(message.author.id)
     #Pulls up shop
     if message.content.startswith("$fruit"):
-        addActiveUser(user)
+        add_active_user(user)
         if roll_fruits(user, True):
             await send_roll(user, message, True)
         else:
@@ -285,15 +285,15 @@ async def on_message(message):
 
 
     if message.content.startswith("$p"):
-        addActiveUser(user)
+        add_active_user(user)
         await message.channel.send(embed = profile_embed(user, message))
 
     if message.content.startswith("$s"):
-        addActiveUser(user)
+        add_active_user(user)
         split_and_sell(user, message.content)
 
     if message.content.startswith("$t"):
-        sqlDump()
+        sql_dump()
 
 @client.event
 async def on_reaction_add(reaction, author):
