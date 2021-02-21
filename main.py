@@ -32,6 +32,7 @@ activeUsers = []
 #storage in SQLite
 conn = sqlite3.connect('sqlTables.db')
 c = conn.cursor()
+conn.row_factory = sqlite3.Row
 #c.execute('''CREATE TABLE userTable
 #    (id TEXT, fruitLimit TINYINT, currency INT, lastMessage TEXT, firstMessage BOOL)''')
 
@@ -44,19 +45,14 @@ c = conn.cursor()
 def sqlRetrieve(user, id):
     c = conn.cursor()
     id = str(id)
-    print (id)
     #user table
     c.execute('SELECT * FROM userTable WHERE id = ?', (id,))  
-    print (f"rowcount is {c.rowcount}")
-    if c.rowcount == 1:
-        row = c.fetchone()
-        print(f"This is the row {row}")
+    row = c.fetchone()
+    if not (row == None):
         user.fruitLimit = row['fruitLimit']
         user.currency = row['currency']
         user.lastMessage = row['lastMessage']
         user.firstMessage = row['firstMessage']
-        print (f"user fruit limit is {row['fruitLimit']}.")
-        print (f"user currency is {row['currency']}.")
         
         
         #local fruit table
@@ -68,19 +64,17 @@ def sqlRetrieve(user, id):
         #pickedFruits table
         c.execute('SELECT * FROM pickedFruits WHERE id = ?', (id,))
         for row in c:
-            user.pickedFruits.append(UserFruit(row['fruit'], row['star']))
+            user.pickedFruits.append(UserFruit(reaction_to_object(row['fruit']), row['star']))
         
         
 
 def sqlDump():
     c = conn.cursor()
-    print(f"The following are the active users {activeUsers}.")
     for user in activeUsers:
         id = str(user.id)
         #user table
         c.execute('DELETE FROM userTable WHERE id = ?', (id,))
         c.execute('INSERT INTO userTable (id, fruitLimit, currency, lastMessage, firstMessage) VALUES (?, ?, ?, ?, ?)', (id, user.fruitLimit, user.currency, user.lastMessage, user.firstMessage))
-        print (f"The id {id} and fruit limit {user.fruitLimit} and more are added.")
 
         #local fruit table
         c.execute('DELETE FROM fruits WHERE id = ?', (id,))
@@ -90,9 +84,7 @@ def sqlDump():
         #pickedFruits table
         c.execute('DELETE FROM pickedFruits WHERE id = ?', (id,))
         for j in range(len(user.pickedFruits)):
-            print (f"j is equal to {j}.")
             c.execute('INSERT INTO pickedFruits (id, fruit, star) VALUES (?, ?, ?)', (id, user.pickedFruits[j].fruit.emoji, user.pickedFruits[j].star))
-    print ("it committed, hopefully")
     conn.commit()
 
 def addActiveUser(user):
@@ -127,11 +119,9 @@ class UserInfo:
     @staticmethod
     def get_user (id):
         if not (id in users):
-            print(f"reupload code executing")
             user = UserInfo(id)
             sqlRetrieve(user, id)
             users.update({id : user})
-            print(f"user {user} and id {id}")
         return users[id] 
 
 
@@ -162,7 +152,7 @@ def roll_fruits(user, noRoll):
         else:
             return False
 
-def reaction_to_object(user, reaction):
+def reaction_to_object(reaction):
     for f in lootTableEntries:
         for e in f.fruit:
             if e.emoji == reaction:
@@ -180,12 +170,12 @@ def pick_fruits(user, reaction):
     for f in user.fruits:
         if reaction.emoji == f:
             
-            if not combine_check(user, reaction_to_object(user, reaction.emoji)):
+            if not combine_check(user, reaction_to_object(reaction.emoji)):
                 if len(user.pickedFruits) >= user.fruitLimit:
                     return False
-                user.pickedFruits.append(UserFruit(reaction_to_object(user, reaction.emoji), "⭐"))
+                user.pickedFruits.append(UserFruit(reaction_to_object(reaction.emoji), "⭐"))
             user.fruits.remove(reaction.emoji)
-            fruitObject = reaction_to_object(user, reaction.emoji)
+            fruitObject = reaction_to_object(reaction.emoji)
             user.remove_currency(fruitObject.cost[0])
             return True
 
@@ -288,7 +278,6 @@ async def on_message(message):
     #Pulls up shop
     if message.content.startswith("$fruit"):
         addActiveUser(user)
-        print(f"active users {activeUsers}")
         if roll_fruits(user, True):
             await send_roll(user, message, True)
         else:

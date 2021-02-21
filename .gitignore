@@ -1,2 +1,6 @@
 config.ini
 __pycache__/
+sqlTables.db
+sqldiff.exe
+sqlite3.exe
+sqlite3_analyzer.exe
