@@ -1,9 +1,9 @@
 import discord
+import asyncio
 import configparser
 import random
 import json
 import sqlite3
-
 
 from operator import itemgetter, attrgetter
 
@@ -14,7 +14,6 @@ config = configparser.ConfigParser()
 config.read('config.ini')
 
 client = discord.Client()
-
 
 lootTableEntries = [
     LootTable(50, [Fruit("🍎", "apple", [1, 3, 18]), Fruit("🍐", "pear", [1, 3, 18])]),
@@ -42,6 +41,13 @@ conn.row_factory = sqlite3.Row
 #c.execute('''CREATE TABLE pickedFruits
 #    (id TEXT, fruit ntext, star ntext)''')
 
+async def sql_timer():
+    while True:
+        # waits 5 minutes then dumps all active user data on a constant loop
+        await asyncio.sleep(300)
+        sql_dump()
+
+
 def sql_retrieve(user, id):
     c = conn.cursor()
     id = str(id)
@@ -53,22 +59,20 @@ def sql_retrieve(user, id):
         user.currency = row['currency']
         user.lastMessage = row['lastMessage']
         user.firstMessage = row['firstMessage']
-        
-        
+             
         #local fruit table
         c.execute('SELECT * FROM fruits WHERE id = ?', (id,))
         for row in c:
             user.fruits.append(row['fruit'])
-        
-        
+              
         #pickedFruits table
         c.execute('SELECT * FROM pickedFruits WHERE id = ?', (id,))
         for row in c:
-            user.pickedFruits.append(UserFruit(reaction_to_object(row['fruit']), row['star']))
-        
-        
+            user.pickedFruits.append(UserFruit(reaction_to_object(row['fruit']), row['star']))      
+
 
 def sql_dump():
+    #dumps data on a timer for users that did things in that time
     c = conn.cursor()
     for user in activeUsers:
         id = str(user.id)
@@ -87,10 +91,32 @@ def sql_dump():
             c.execute('INSERT INTO pickedFruits (id, fruit, star) VALUES (?, ?, ?)', (id, user.pickedFruits[j].fruit.emoji, user.pickedFruits[j].star))
     conn.commit()
 
+
+def sql_dump_special(user):
+    #dumps data only for one user after a special event
+    c = conn.cursor()
+    id = str(user.id)
+    #user table
+    c.execute('DELETE FROM userTable WHERE id = ?', (id,))
+    c.execute('INSERT INTO userTable (id, fruitLimit, currency, lastMessage, firstMessage) VALUES (?, ?, ?, ?, ?)', (id, user.fruitLimit, user.currency, user.lastMessage, user.firstMessage))
+
+    #local fruit table
+    c.execute('DELETE FROM fruits WHERE id = ?', (id,))
+    for i in range(len(user.fruits)):
+        c.execute('INSERT INTO fruits (id, fruit) VALUES (?, ?)', (id, user.fruits[i]))
+        
+    #pickedFruits table
+    c.execute('DELETE FROM pickedFruits WHERE id = ?', (id,))
+    for j in range(len(user.pickedFruits)):
+        c.execute('INSERT INTO pickedFruits (id, fruit, star) VALUES (?, ?, ?)', (id, user.pickedFruits[j].fruit.emoji, user.pickedFruits[j].star))
+    conn.commit()
+
+
 def add_active_user(user):
     #message and react events call this function so that only people who are rolling are looped through
     if not (user in activeUsers):
         activeUsers.append(user)
+
 
 class UserInfo:
 
@@ -152,11 +178,13 @@ def roll_fruits(user, noRoll):
         else:
             return False
 
+
 def reaction_to_object(reaction):
     for f in lootTableEntries:
         for e in f.fruit:
             if e.emoji == reaction:
                 return e
+
 
 def pick_fruits(user, reaction):
     #Picks fruit if there is room in storage
@@ -178,6 +206,7 @@ def pick_fruits(user, reaction):
             fruitObject = reaction_to_object(reaction.emoji)
             user.remove_currency(fruitObject.cost[0])
             return True
+
 
 def combine_check (user, newFruit):
     if not len(user.pickedFruits) == 0:
@@ -203,6 +232,7 @@ def combine_check (user, newFruit):
             user.pickedFruits.append(UserFruit(newFruit, "⭐⭐"))
             return True
     return False
+
 
 def split_and_sell (user, message):
     #split
@@ -270,6 +300,9 @@ def profile_embed(user, message):
 @client.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(client))
+    #starts timer
+    client.loop.create_task(sql_timer())
+    
 
 
 @client.event
