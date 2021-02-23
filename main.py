@@ -33,18 +33,18 @@ conn = sqlite3.connect('sqlTables.db')
 c = conn.cursor()
 conn.row_factory = sqlite3.Row
 #c.execute('''CREATE TABLE userTable
-#    (id TEXT, fruitLimit TINYINT, currency INT, lastMessage TEXT, firstMessage BOOL)''')
-
+#    (id TEXT NOT NULL PRIMARY KEY, fruitLimit TINYINT, currency INT, lastMessage TEXT, firstMessage BOOL)''')
 #c.execute('''CREATE TABLE fruits
 #    (id TEXT, fruit ntext)''')
-
 #c.execute('''CREATE TABLE pickedFruits
 #    (id TEXT, fruit ntext, star ntext)''')
+#c.execute('CREATE INDEX useridfruits ON fruits (id)')
+#c.execute('CREATE INDEX useridpickedfruits ON pickedFruits (id)')
 
 async def sql_timer():
     while True:
-        # waits 5 minutes then dumps all active user data on a constant loop
-        await asyncio.sleep(300)
+        # waits 1 minute then dumps all active user data on a constant loop
+        await asyncio.sleep(60)
         sql_dump()
 
 
@@ -77,8 +77,11 @@ def sql_dump():
     for user in activeUsers:
         id = str(user.id)
         #user table
-        c.execute('DELETE FROM userTable WHERE id = ?', (id,))
-        c.execute('INSERT INTO userTable (id, fruitLimit, currency, lastMessage, firstMessage) VALUES (?, ?, ?, ?, ?)', (id, user.fruitLimit, user.currency, user.lastMessage, user.firstMessage))
+        c.execute('INSERT INTO userTable \
+            (id, fruitLimit, currency, lastMessage, firstMessage) VALUES (?, ?, ?, ?, ?) \
+            ON CONFLICT (id) DO UPDATE SET fruitlimit = ?, currency = ?, lastMessage = ?, firstMessage = ?', 
+            (id, user.fruitLimit, user.currency, user.lastMessage, user.firstMessage, 
+            user.fruitLimit, user.currency, user.lastMessage, user.firstMessage))
 
         #local fruit table
         c.execute('DELETE FROM fruits WHERE id = ?', (id,))
@@ -325,8 +328,6 @@ async def on_message(message):
         add_active_user(user)
         split_and_sell(user, message.content)
 
-    if message.content.startswith("$t"):
-        sql_dump()
 
 @client.event
 async def on_reaction_add(reaction, author):
